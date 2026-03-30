@@ -146,6 +146,29 @@ class UploadDao
   }
 
   /**
+   * Get all uploads accessible by a group.
+   * @param int $groupId Group id
+   * @return Upload[] Array of Upload objects
+   */
+  public function getAccessibleUploads($groupId)
+  {
+    $stmt = __METHOD__;
+    $sql = "SELECT u.* FROM upload u
+            LEFT JOIN perm_upload p ON p.upload_fk = u.upload_pk AND p.group_fk = $1
+            WHERE u.pfile_fk IS NOT NULL
+            AND (p.perm > 0 OR u.public_perm > 0)";
+
+    $queryResult = $this->dbManager->getRows($sql, array($groupId), $stmt);
+
+    $results = array();
+    foreach ($queryResult as $row) {
+      $results[] = Upload::createFromTable($row);
+    }
+
+    return $results;
+  }
+
+  /**
    * @param $itemId
    * @param $uploadTreeTableName
    * @return ItemTreeBounds

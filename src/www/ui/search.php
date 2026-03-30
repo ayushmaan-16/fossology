@@ -43,15 +43,10 @@ class search extends FO_Plugin
 
   function loadUploads()
   {
-    $allUploadsPre = $this->uploadDao->getActiveUploadsArray();
-    $filteredUploadsList = array();
-
-    return array_filter($allUploadsPre, function($uploadObj){
-      if ($this->uploadDao->isAccessible($uploadObj->getId(), Auth::getGroupId())) {
-        return true;
-      }
-      return false;
-    });
+    if (Auth::isAdmin()) {
+      return $this->uploadDao->getActiveUploadsArray();
+    }
+    return $this->uploadDao->getAccessibleUploads(Auth::getGroupId());
   }
 
   /**
