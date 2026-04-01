@@ -762,4 +762,13 @@ ORDER BY lft asc
     }
     return null;
   }
+
+  /**
+   * Get all license types as a map.
+   * @return array Associative array of license PKs to their types
+   */
+  public function getLicenseTypeMap()
+  {
+    return $this->dbManager->createMap('license_ref', 'rf_pk', 'rf_licensetype', 'LicenseDao.getLicenseTypeMap');
+  }
 }

@@ -147,6 +147,10 @@ class DeciderAgent extends Agent
    * License Dao
    */
   private $licenseDao;
+  /** @var array $licenseTypeMap
+   * Cache for license types.
+   */
+  private $licenseTypeMap = [];
 
   function __construct($licenseMapUsage=null)
   {
@@ -176,6 +180,7 @@ class DeciderAgent extends Agent
     $this->activeRules = array_key_exists('r', $args) ? intval($args['r']) : self::RULES_ALL;
     $this->licenseType = array_key_exists('t', $args) ?
         $this->getLicenseType(str_replace(["'", '"'], "", $args['t'])) : "";
+    $this->licenseTypeMap = $this->licenseDao->getLicenseTypeMap();
     $this->licenseMap = new LicenseMap($this->dbManager, $this->groupId, $this->licenseMapUsage);
 
     if (array_key_exists("r", $args) && (($this->activeRules&self::RULES_COPYRIGHT_FALSE_POSITIVE)== self::RULES_COPYRIGHT_FALSE_POSITIVE)) {
@@ -765,9 +770,14 @@ class DeciderAgent extends Agent
     foreach ($licenseMatches as $agentMatch) {
       foreach ($agentMatch as $agentLicenseMatches) {
         foreach ($agentLicenseMatches as $licenseMatch) {
-          if (!array_key_exists($licenseMatch->getLicenseId(), $licenseTypes)) {
-            $licenseTypes[$licenseMatch->getLicenseId()] = $this->licenseDao
-                ->getLicenseType($licenseMatch->getLicenseId());
+          $licenseId = $licenseMatch->getLicenseId();
+          if (!array_key_exists($licenseId, $licenseTypes)) {
+            if (array_key_exists($licenseId, $this->licenseTypeMap)) {
+              $licenseTypes[$licenseId] = $this->licenseTypeMap[$licenseId];
+            } else {
+              $licenseTypes[$licenseId] = $this->licenseDao->getLicenseType($licenseId);
+              $this->licenseTypeMap[$licenseId] = $licenseTypes[$licenseId];
+            }
           }
         }
       }

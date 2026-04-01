@@ -345,8 +345,7 @@ class ClearingDao
       throw new \Exception( _("Cannot add candidate license as global decision\n") );
     }
 
-    $uploadId = $this->uploadDao->getUploadEntry($uploadTreeId)['upload_fk'];
-    $itemTreeBounds = $this->uploadDao->getItemTreeBoundsFromUploadId($uploadTreeId, $uploadId);
+    $itemTreeBounds = $this->uploadDao->getItemTreeBoundsById($uploadTreeId);
 
     if ($this->isDecisionCheck($uploadTreeId, $groupId, DecisionTypes::IRRELEVANT)) {
       $this->copyrightDao->updateTable($itemTreeBounds, '', '', $userId, 'copyright', 'rollback');

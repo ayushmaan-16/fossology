@@ -193,6 +193,48 @@ class UploadDao
   }
 
   /**
+   * Get ItemTreeBounds for a given uploadtree item in a single JOIN query.
+   *
+   * Resolves the correct uploadtree partition table name and fetches the item
+   * row in one round-trip by joining `uploadtree` (the parent/inheritance
+   * table) with `upload` to read `uploadtree_tablename`.
+   *
+   * This is more efficient than the three-step pattern of:
+   *   getItemTreeBounds() [wrong table] +
+   *   getUploadtreeTableName() +
+   *   getItemTreeBounds() [correct table]
+   *
+   * @param int $uploadTreeId  The uploadtree_pk to look up
+   * @return ItemTreeBounds
+   * @throws Exception if the item is not found
+   */
+  public function getItemTreeBoundsById(int $uploadTreeId): ItemTreeBounds
+  {
+    $row = $this->dbManager->getSingleRow(
+      "SELECT ut.uploadtree_pk, ut.upload_fk, ut.lft, ut.rgt,
+              u.uploadtree_tablename
+       FROM uploadtree ut
+       JOIN upload u ON u.upload_pk = ut.upload_fk
+       WHERE ut.uploadtree_pk = $1",
+      [$uploadTreeId],
+      'UploadDao.getItemTreeBoundsById'
+    );
+    if ($row === false) {
+      throw new Exception("did not find uploadTreeId $uploadTreeId in uploadtree");
+    }
+    $tableName = !empty($row['uploadtree_tablename'])
+      ? $row['uploadtree_tablename']
+      : 'uploadtree';
+    return new ItemTreeBounds(
+      intval($row['uploadtree_pk']),
+      $tableName,
+      intval($row['upload_fk']),
+      intval($row['lft']),
+      intval($row['rgt'])
+    );
+  }
+
+  /**
    * @param int $uploadId
    * @param string|null
    * @throws Exception
