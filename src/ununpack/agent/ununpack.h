@@ -190,6 +190,9 @@ void Usage (char *Name, char *Version);
 void deleteTmpFiles(char *dir);
 void SQLNoticeProcessor(void *arg, const char *message);
 int ShouldExclude(char *Filename, const char *ExcludePatterns);
+int IsPdfEncrypted(char *Filename);
+
+#define MIN_ARCHIVE_TEST_SIZE 512
 
 
 /* traverse.c */
