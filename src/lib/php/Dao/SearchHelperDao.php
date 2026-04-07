@@ -242,8 +242,12 @@ class SearchHelperDao
     $stmt = __METHOD__ . "_paginated";
     $rows = $this->dbManager->getRows($PaginatedSQL, [], $stmt);
     if (!empty($rows)) {
+      $uploadIds = array_unique(array_column($rows, 'upload_fk'));
+      $accessibleUploads = $uploadDao->filterAccessibleUploads($uploadIds, $groupID);
+      $accessibleMap = array_flip($accessibleUploads);
+
       foreach ($rows as $row) {
-        if (!$uploadDao->isAccessible($row['upload_fk'], $groupID)) {
+        if (!isset($accessibleMap[intval($row['upload_fk'])])) {
           continue;
         }
         $totalUploadtreeRecs[] = $row;

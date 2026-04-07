@@ -138,40 +138,25 @@ class UploadPermissionDao
       return array();
     }
 
-    $accessible = array();
-    $placeholders = implode(',', array_map('intval', $uploadIds));
-
-    // Group-level permissions
-    $sql = "SELECT upload_fk FROM perm_upload WHERE upload_fk IN ($placeholders)
-          AND group_fk = $1
-          AND perm > $2";
-    $stmt = __METHOD__ . '.batch_group_perm';
-    $this->dbManager->prepare($stmt, $sql);
-    $result = $this->dbManager->execute($stmt, array($groupId, Auth::PERM_NONE));
-    while ($row = $this->dbManager->fetchArray($result)) {
-      $accessible[] = intval($row['upload_fk']);
-    }
-    $this->dbManager->freeResult($result);
-
-    // Public permissions — check uploads not already cleared
-    $remaining = array_diff($uploadIds, $accessible);
-    if (!empty($remaining)
-      && isset($_SESSION)
-      && array_key_exists(Auth::USER_LEVEL, $_SESSION)
-      && $_SESSION[Auth::USER_LEVEL] !== Auth::PERM_NONE) {
-
-      $remaining = implode(',', array_map('intval', $remaining));
-      $sql = "SELECT upload_pk FROM upload WHERE upload_pk IN ($remaining)
-              AND public_perm > $1";
-      $stmt = __METHOD__ . '.batch_public_perm';
-      $this->dbManager->prepare($stmt, $sql);
-      $result = $this->dbManager->execute($stmt, array(Auth::PERM_NONE));
-      while ($row = $this->dbManager->fetchArray($result)) {
-        $accessible[] = intval($row['upload_pk']);
-      }
-      $this->dbManager->freeResult($result);
+    $uploadIds = array_unique(array_filter($uploadIds));
+    if (empty($uploadIds)) {
+      return array();
     }
 
-    return $accessible;
+    $uploadIdsStr = '{' . implode(',', array_map('intval', $uploadIds)) . '}';
+
+    $publicAccessAllowed = isset($_SESSION) &&
+        array_key_exists(Auth::USER_LEVEL, $_SESSION) &&
+        $_SESSION[Auth::USER_LEVEL] !== Auth::PERM_NONE;
+
+    $publicFilter = $publicAccessAllowed ? "public_perm > $2" : "FALSE";
+
+    $sql = "SELECT upload_pk FROM upload " .
+           "WHERE upload_pk = ANY($1::int[]) AND ($publicFilter " .
+           "OR EXISTS(SELECT 1 FROM perm_upload WHERE upload_fk = upload_pk AND group_fk = $3 AND perm > $4))";
+
+    $rows = $this->dbManager->getRows($sql, array($uploadIdsStr, Auth::PERM_NONE, $groupId, Auth::PERM_NONE), __METHOD__);
+
+    return array_column($rows, 'upload_pk');
   }
 }

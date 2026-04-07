@@ -346,22 +346,58 @@ class UploadDao
    */
   public function getClearingDuration(int $uploadId): ?array
   {
-    $duration = "NA";
-    $assignDate = $this->getAssigneeDate($uploadId);
-    $closingDate = $this->getClosedDate($uploadId);
-    $durationSort = 0;
-    if ($assignDate != null && $closingDate != null) {
-      try {
-        $closingDate = new DateTime($closingDate);
-        $assignDate = new DateTime($assignDate);
-        if ($assignDate < $closingDate) {
-          $duration = HumanDuration($closingDate->diff($assignDate));
-          $durationSort = $closingDate->getTimestamp() - $assignDate->getTimestamp();
-        }
-      } catch (Exception $_) {
-      }
+    $batch = $this->getClearingDurationsBatch(array($uploadId));
+    return $batch[$uploadId];
+  }
+
+  /**
+   * Get clearing durations for a list of uploads.
+   * @param int[] $uploadIds
+   * @return array Map of upload_pk => array(duration, durationSort)
+   */
+  public function getClearingDurationsBatch(array $uploadIds): array
+  {
+    if (empty($uploadIds)) {
+      return array();
     }
-    return array($duration, $durationSort);
+
+    $uploadIds = array_unique(array_filter($uploadIds));
+    if (empty($uploadIds)) {
+      return array();
+    }
+
+    $uploadIdsStr = '{' . implode(',', array_map('intval', $uploadIds)) . '}';
+
+    $sql = "SELECT upload_fk, event_type, event_ts FROM upload_events " .
+           "WHERE upload_fk = ANY($1::int[]) AND event_type IN ($2, $3)";
+
+    $rows = $this->dbManager->getRows($sql, array($uploadIdsStr, UploadEvents::ASSIGNEE_EVENT, UploadEvents::UPLOAD_CLOSED_EVENT), __METHOD__);
+
+    $eventMap = array();
+    foreach ($rows as $row) {
+      $eventMap[$row['upload_fk']][$row['event_type']] = $row['event_ts'];
+    }
+
+    $results = array();
+    foreach ($uploadIds as $id) {
+      $duration = "NA";
+      $durationSort = 0;
+      $id = (int)$id;
+
+      if (isset($eventMap[$id][UploadEvents::ASSIGNEE_EVENT]) && isset($eventMap[$id][UploadEvents::UPLOAD_CLOSED_EVENT])) {
+        try {
+          $assignDate = new DateTime($eventMap[$id][UploadEvents::ASSIGNEE_EVENT]);
+          $closingDate = new DateTime($eventMap[$id][UploadEvents::UPLOAD_CLOSED_EVENT]);
+          if ($assignDate < $closingDate) {
+            $duration = HumanDuration($closingDate->diff($assignDate));
+            $durationSort = $closingDate->getTimestamp() - $assignDate->getTimestamp();
+          }
+        } catch (\Exception $_) {
+        }
+      }
+      $results[$id] = array($duration, $durationSort);
+    }
+    return $results;
   }
   /**
    * \brief Get the uploadtree table name for this upload_pk

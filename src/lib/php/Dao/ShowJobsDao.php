@@ -55,15 +55,13 @@ class ShowJobsDao
     $jobArray = array();
 
     // only use the uploads the user / group has access to
-    $upload_pks = array_filter($upload_pks, function($upload_pk) {
-      return $upload_pk !== null && $this->uploadDao->isAccessible($upload_pk, Auth::getGroupId());
-    });
+    $accessibleUploads = $this->uploadDao->filterAccessibleUploads($upload_pks, Auth::getGroupId());
 
-    if (empty($upload_pks)) {
+    if (empty($accessibleUploads)) {
       return $jobArray;
     }
 
-    $upload_pks = array_values($upload_pks);
+    $upload_pks = array_values($accessibleUploads);
     $uploadList = $this->toPgIntArray($upload_pks);
 
     /* Count total jobs for pagination */
