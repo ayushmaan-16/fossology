@@ -887,6 +887,7 @@ async function saveExpression() {
         .done(function (data) {
           $('#editExpressionModal').modal('hide');
           $('#newExpressionbtn').hide();
+          $('#newExpressionInfo').hide();
           $('#decTypeSet').addClass('border-danger');
           var table = createClearingTable();
           table.fnDraw(false);
