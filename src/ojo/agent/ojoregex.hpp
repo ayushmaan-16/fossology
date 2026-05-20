@@ -21,7 +21,7 @@
  * -# Matches at most 5 identifiers each with length greater than 3 (based on
  * https://github.com/spdx/license-list-data/tree/master/html)
  */
-#define SPDX_LICENSE_LIST "spdx-licen[cs]e(?:id|[- ]identifier): \\K((?:(?: (?:and|or|with) )?\\(?(?:[\\w\\d\\.\\+\\-]{3,})\\)?){1,5})"
+#define SPDX_LICENSE_LIST "spdx-licen[cs]e(?:id|[- ]identifier): \\K((?:(?: (?:and|or|with) )?\\(?(?:[\\w\\d\\.\\+\\-:]{3,})\\)?){1,5})"
 /**
  * @def SPDX_LICENSE_NAMES
  * @brief Regex to filter license names from list of license list
@@ -31,7 +31,7 @@
  * https://github.com/spdx/license-list-data/tree/master/html)
  * -# License name should end with a word, digit or +
  */
-#define SPDX_LICENSE_NAMES "(?: and | or | with )?\\(?([\\w\\d\\.\\+\\-]{1,}[\\w\\d\\+])\\)?"
+#define SPDX_LICENSE_NAMES "(?: and | or | with )?\\(?([\\w\\d\\.\\+\\-:]{1,}[\\w\\d\\+])\\)?"
 /**
  * @def SPDX_DUAL_LICENSE
  * @brief Regex to check if Dual-license

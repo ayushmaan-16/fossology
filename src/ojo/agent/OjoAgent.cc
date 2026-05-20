@@ -6,7 +6,22 @@
 
 #include "OjoAgent.hpp"
 
+#include "spdx_expression_parser.h"
+
 using namespace std;
+
+static bool isComplexExpression(const SpdxExpressionResult &result)
+{
+  if (!result.valid || result.canonical == NULL)
+  {
+    return false;
+  }
+
+  string canonical(result.canonical);
+  return canonical.find(" AND ") != string::npos ||
+    canonical.find(" OR ") != string::npos ||
+    canonical.find(" WITH ") != string::npos;
+}
 
 /**
  * Default constructor for OjoAgent.
@@ -52,11 +67,7 @@ vector<ojomatch> OjoAgent::processFile(const string &filePath,
   vector<ojomatch> licenseNames;
 
   scanString(fileContent, regLicenseList, licenseList, 0, false);
-  for (auto m : licenseList)
-  {
-    scanString(m.content, regLicenseName, licenseNames, m.start, false);
-    scanString(m.content, regDualLicense, licenseNames, m.start, true);
-  }
+  scanLicenseList(licenseList, licenseNames, false);
 
   findLicenseId(licenseNames, databaseHandler, groupId, userId);
   filterMatches(licenseNames);
@@ -86,11 +97,7 @@ vector<ojomatch> OjoAgent::processFile(const string &filePath)
   vector<ojomatch> licenseNames;
 
   scanString(fileContent, regLicenseList, licenseList, 0, false);
-  for (auto m : licenseList)
-  {
-    scanString(m.content, regLicenseName, licenseNames, m.start, false);
-    scanString(m.content, regDualLicense, licenseNames, m.start, true);
-  }
+  scanLicenseList(licenseList, licenseNames, true);
 
   // Remove duplicate matches for CLI run
   vector<ojomatch>::iterator uniqueListIt = std::unique(licenseNames.begin(),
@@ -98,6 +105,39 @@ vector<ojomatch> OjoAgent::processFile(const string &filePath)
   licenseNames.resize(std::distance(licenseNames.begin(), uniqueListIt));
 
   return licenseNames;
+}
+
+/**
+ * Scan SPDX-License-Identifier contents and optionally emit full SPDX
+ * expressions. Expression emission is currently used for CLI/test
+ * verification; scheduler storage still falls back to license IDs until the
+ * database has first-class expression tables.
+ * @param licenseList     SPDX-License-Identifier matches.
+ * @param[out] licenseNames The resulting license or expression matches.
+ * @param emitExpressions True to emit complex SPDX expressions as one match.
+ */
+void OjoAgent::scanLicenseList(const vector<ojomatch> &licenseList,
+    vector<ojomatch> &licenseNames, bool emitExpressions)
+{
+  for (auto m : licenseList)
+  {
+    if (emitExpressions)
+    {
+      SpdxExpressionResult expression =
+        spdx_expression_parse(m.content.c_str());
+      if (isComplexExpression(expression))
+      {
+        licenseNames.push_back(ojomatch(m.start, m.end, m.len,
+            string(expression.canonical)));
+        spdx_expression_result_free(&expression);
+        continue;
+      }
+      spdx_expression_result_free(&expression);
+    }
+
+    scanString(m.content, regLicenseName, licenseNames, m.start, false);
+    scanString(m.content, regDualLicense, licenseNames, m.start, true);
+  }
 }
 
 /**
