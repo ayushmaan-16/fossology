@@ -779,10 +779,13 @@ class UploadTreeController extends RestController
     }
 
     $parser = new LicenseExpressionParser($expression, $this->restHelper->getGroupId(), $this->restHelper->getUserId());
-    $parser->parse();
-    $license = $this->licenseDao->getExpressionByAST(json_encode($parser->getAST()));
+    if (!$parser->parse()) {
+      throw new HttpBadRequestException("Invalid license expression: " . $parser->getErrorCode());
+    }
+    $expressionAst = json_encode($parser->getAST());
+    $license = $this->licenseDao->getExpressionByAST($expressionAst);
     if ($license === null) {
-      $newExpressionId = $this->licenseDao->insertExpression(json_encode($parser->getAST()));
+      $newExpressionId = $this->licenseDao->insertExpression($expressionAst);
     } else {
       $newExpressionId = $license->getId();
     }

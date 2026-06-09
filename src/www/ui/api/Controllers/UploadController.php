@@ -1048,7 +1048,9 @@ class UploadController extends RestController
       throw new HttpBadRequestException("License Expression missing from request.");
     }
     $parser = new LicenseExpressionParser($expression, $this->restHelper->getGroupId(), $this->restHelper->getUserId());
-    $parser->parse();
+    if (!$parser->parse()) {
+      throw new HttpBadRequestException("Invalid license expression: " . $parser->getErrorCode());
+    }
     $license = $licenseDao->getExpressionByAST(json_encode($parser->getAST()));
 
     if ($license === null) {
@@ -1152,7 +1154,9 @@ class UploadController extends RestController
     }
 
     $parser = new LicenseExpressionParser($expression, $this->restHelper->getGroupId(), $this->restHelper->getUserId());
-    $parser->parse();
+    if (!$parser->parse()) {
+      throw new HttpBadRequestException("Invalid license expression: " . $parser->getErrorCode());
+    }
     $license = $licenseDao->getExpressionByAst(json_encode($parser->getAST()));
     $this->uploadAccessible($uploadId);
 

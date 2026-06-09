@@ -222,6 +222,14 @@ class CycloneDXAgent extends Agent
         continue;
       }
 
+      if ($mainLicObj->getSpdxId() === "LicenseRef-fossology-License-Expression") {
+        $licensedata = array(
+          "expression" => $mainLicObj->getExpression($this->licenseDao, $this->groupId)
+        );
+        $mainLicenses[] = $licensedata;
+        continue;
+      }
+
       $licensedata = $this->getLicenseDataForCycloneDX($mainLicObj, $licId, $customLicenseTexts);
       $mainLicenses[] = $this->reportGenerator->createLicense($licensedata);
 
@@ -363,6 +371,13 @@ class CycloneDXAgent extends Agent
         foreach ($licenses->getConcludedLicenses() as $licenseId) {
           if (array_key_exists($licenseId, $this->licensesInDocument)) {
             $licObj = $this->licensesInDocument[$licenseId]->getLicenseObj();
+            if ($licObj->getSpdxId() === "LicenseRef-fossology-License-Expression") {
+              $licensedata = array(
+                "expression" => $licObj->getExpression($this->licenseDao, $this->groupId)
+              );
+              $licensesfound[] = $licensedata;
+              continue;
+            }
             $isCustomText = $this->licensesInDocument[$licenseId]->isCustomText();
             $licensedata = $this->getLicenseDataForCycloneDX($licObj, $licenseId, $customLicenseTexts, $isCustomText, false);
             $licensesfound[] = $this->reportGenerator->createLicense($licensedata);
@@ -372,6 +387,13 @@ class CycloneDXAgent extends Agent
         foreach ($licenses->getScanners() as $licenseId) {
           if (array_key_exists($licenseId, $this->licensesInDocument)) {
             $licObj = $this->licensesInDocument[$licenseId]->getLicenseObj();
+            if ($licObj->getSpdxId() === "LicenseRef-fossology-License-Expression") {
+              $licensedata = array(
+                "expression" => $licObj->getExpression($this->licenseDao, $this->groupId)
+              );
+              $licensesfound[] = $licensedata;
+              continue;
+            }
             $isCustomText = $this->licensesInDocument[$licenseId]->isCustomText();
             $licensedata = $this->getLicenseDataForCycloneDX($licObj, $licenseId, $customLicenseTexts, $isCustomText, false);
             $licensesfound[] = $this->reportGenerator->createLicense($licensedata);
