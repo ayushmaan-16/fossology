@@ -448,7 +448,14 @@ class SpdxAgent extends Agent
           $mainLicenseExpression->combineExpression($this->licensesInDocument[$mainLicense]->getLicenseObj());
         }
         if ($mainLicenseExpression->getSpdxId() === "LicenseRef-fossology-License-Expression") {
-          $mainLicenseString = $this->buildExpression(json_decode($mainLicenseExpression->getFullName(), true), $this->groupId, true);
+          if ($this->outputFormat == self::DEFAULT_OUTPUT_FORMAT) {
+            $mainLicenseString = $this->buildExpression(
+              json_decode($mainLicenseExpression->getFullName(), true),
+              $this->groupId, true);
+          } else {
+            $mainLicenseString = $mainLicenseExpression->getExpression(
+              $this->licenseDao, $this->groupId);
+          }
           if (stripos($mainLicenseString, "<spdx:member") === 0) {
             $mainLicenseString = str_replace("<spdx:member", "<spdx:licenseConcluded", $mainLicenseString);
           }
@@ -616,7 +623,7 @@ class SpdxAgent extends Agent
         foreach ($fileNode->getConcludedLicenses() as $license) {
           $licenseObj = $this->licensesInDocument[$license]->getLicenseObj();
           if ($this->isLicenseExpression($licenseObj)) {
-            $licenses = $this->buildExpressionFromLicense($licenseObj);
+            $licenses = $this->buildExpressionTextFromLicense($licenseObj);
             break;
           }
           $licenses[] = $licenseObj->getSpdxId();
@@ -633,7 +640,7 @@ class SpdxAgent extends Agent
           foreach ($fileNode->getScanners() as $license) {
             $licenseObj = $this->licensesInDocument[$license]->getLicenseObj();
             if ($this->isLicenseExpression($licenseObj)) {
-              $implodedLicenses = $this->buildExpressionFromLicense($licenseObj);
+              $implodedLicenses = $this->buildExpressionTextFromLicense($licenseObj);
               break;
             }
             $implodedLicenses[] = $licenseObj->getSpdxId();
@@ -833,7 +840,9 @@ class SpdxAgent extends Agent
         if (! $this->licensesInDocument[$license]->isTextPrinted()) {
           $licenseObj = $this->licensesInDocument[$license]->getLicenseObj();
           if ($this->isLicenseExpression($licenseObj)) {
-            $concludedLicensesString[] = $this->buildExpressionFromLicense($licenseObj);
+            $concludedLicensesString[] = $this->outputFormat == self::DEFAULT_OUTPUT_FORMAT
+              ? $this->buildExpressionFromLicense($licenseObj)
+              : $this->buildExpressionTextFromLicense($licenseObj);
             continue;
           }
           $textToBePrinted[] = $license;
