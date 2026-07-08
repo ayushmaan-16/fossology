@@ -78,6 +78,33 @@ class LicenseClearedGetter extends ClearedGetterCommon
         $originLicenseId = $clearingLicense->getLicenseId();
         $licenseId = $licenseMap->getProjectedId($originLicenseId);
 
+        if ($clearingLicense->getSpdxId() === 'LicenseRef-fossology-License-Expression') {
+          if ($includeExpressions) {
+            if ($this->onlyAcknowledgements) {
+              $text = $acknowledgement;
+              $risk = "";
+            } else if ($this->onlyComments) {
+              $text = $comment;
+              $risk = "";
+            } else {
+              $reportInfo = $clearingLicense->getReportInfo();
+              $text = $reportInfo ? : 'License Expression';
+              $risk = "";
+              $acknowledgement = $clearingLicense->getAcknowledgement();
+            }
+            $ungroupedStatements[] = array(
+              'licenseId' => $originLicenseId,
+              'risk' => $risk,
+              'content' => $clearingLicense->getLicenseRef()->getExpression(
+                $this->licenseDao, $groupId),
+              'uploadtree_pk' => $clearingDecision->getUploadTreeId(),
+              'text' => $text,
+              'acknowledgement' => $acknowledgement
+            );
+          }
+          continue;
+        }
+
         if ($this->onlyAcknowledgements) {
           $text = $acknowledgement;
           $risk = "";
@@ -89,22 +116,6 @@ class LicenseClearedGetter extends ClearedGetterCommon
           $text = $reportInfo ? : $this->getCachedLicenseText($licenseId, "any");
           $risk = $this->getCachedLicenseRisk($licenseId, $groupId);
           $acknowledgement = $clearingLicense->getAcknowledgement();
-        }
-        if ($clearingLicense->getSpdxId() === 'LicenseRef-fossology-License-Expression') {
-          if ($includeExpressions) {
-            if (empty($text)) {
-              $text = 'License Expression';
-            }
-            $ungroupedStatements[] = array(
-              'licenseId' => $originLicenseId,
-              'risk' => $risk,
-              'content' => $clearingLicense->getLicenseRef()->getExpression($this->licenseDao, $groupId),
-              'uploadtree_pk' => $clearingDecision->getUploadTreeId(),
-              'text' => $text,
-              'acknowledgement' => $acknowledgement
-            );
-          }
-          continue;
         }
         if (!$this->onlyExpressions) {
           $ungroupedStatements[] = array(
