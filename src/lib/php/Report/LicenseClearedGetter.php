@@ -154,6 +154,12 @@ class LicenseClearedGetter extends ClearedGetterCommon
       $isUnifiedReport, $objectAgent);
   }
 
+  public function getLicenseExpressionHistogramForReport($uploadId, $groupId)
+  {
+    $histogramStatements = $this->getExpressionHistogram($uploadId, $groupId);
+    return array("statements" => $histogramStatements);
+  }
+
   /**
    * Group acknowledgement statements
    * @param array $ungrupedStatements
@@ -302,6 +308,41 @@ class LicenseClearedGetter extends ClearedGetterCommon
       }
     }
     return $LicenseHistArray;
+  }
+
+  /**
+   * @param int $uploadId, $groupId
+   * @return array scannerExpressionHistogram, editedExpressionHist
+   */
+  protected function getExpressionHistogram($uploadId, $groupId)
+  {
+    $expressionHistArray = array();
+    $scannerAgents = array_keys($this->agentNames);
+    $scanJobProxy = new ScanJobProxy($this->agentDao, $uploadId);
+    $scanJobProxy->createAgentStatus($scannerAgents);
+    $allAgentIds = $scanJobProxy->getLatestSuccessfulAgentIds();
+    $itemTreeBounds = $this->uploadDao->getParentItemBounds($uploadId);
+    $scannerExpressionHistogram = $this->licenseDao->getLicenseExpressionHistogram(
+      $itemTreeBounds, $allAgentIds);
+    $editedExpressionHist = $this->clearingDao
+      ->getClearedLicenseExpressionIdAndMultiplicities($itemTreeBounds, $groupId);
+
+    $totalExpressions = array_unique(array_merge(
+      array_keys($scannerExpressionHistogram), array_keys($editedExpressionHist)));
+
+    foreach ($totalExpressions as $expression) {
+      $count = array_key_exists($expression, $scannerExpressionHistogram) ?
+        $scannerExpressionHistogram[$expression]['unique'] : 0;
+      $editedCount = array_key_exists($expression, $editedExpressionHist) ?
+        $editedExpressionHist[$expression]['count'] : 0;
+      $expressionHistArray[] = array(
+        "scannerCount" => $count,
+        "editedCount" => $editedCount,
+        "licenseShortname" => $expression
+      );
+    }
+
+    return $expressionHistArray;
   }
 
   /**
