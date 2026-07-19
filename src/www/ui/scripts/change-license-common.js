@@ -705,7 +705,7 @@ function editExpression(id=0, byBulk=false) {
   if (byBulk) {
     editExpressionTrigger = "Bulk";
     var content = bulkFormTableContent[3]();
-    for (i = 0; i < content.length; ++i) {
+    for (var i = 0; i < content.length; ++i) {
       if (!content[i].isExpression){
         firstLicense =content[i].licenseId;
       }
@@ -746,14 +746,20 @@ function editExpression(id=0, byBulk=false) {
 
 function concludeExpressionBulk() {
   var content = bulkFormTableContent[3]();
-  for (i = 0; i < content.length; ++i) {
+  for (var i = 0; i < content.length; ++i) {
     if (content[i].isExpression){
-      console.log(content[i]);
       editExpression(content[i].licenseId, true);
       return;
     }
   }
   editExpression(0, true);
+}
+
+function getSavedExpressionId(data) {
+  if (data && typeof data === 'object') {
+    return data.expressionId || data.id || data.rf_pk || null;
+  }
+  return data || null;
 }
 
 function getLeftNode(node) {
@@ -863,24 +869,10 @@ function editNode(node) {
     $('#operatorValue').val(node.value || '').parent().toggle(node.type === 'Expression');
     $('#editNodeModal').modal('show');
   }
-  if (editExpressionTrigger === "Bulk" && node.type === 'License') {
-    var licenseSelect = $('#licenseValue');
-    console.log("bulk");
-
-    // Clear previous options
-    licenseSelect.empty();
-    // Use licenses from bulkFormTableContent
-    var bulkContent = bulkFormTableContent[3](); // Get content array
-    bulkContent.forEach(function(lic) {
-      if (lic.action === "Add") {
-        licenseSelect.append(new Option(lic.licenseName, lic.licenseId, false, node.value == lic.licenseId));
-      }
-    });
-    showEditNodeModal();
-    return;
-  }
   if (node.type === 'License') {
-    ensureExpressionLicenseOption(node.value, showEditNodeModal);
+    loadExpressionLicenseOptions(function() {
+      ensureExpressionLicenseOption(node.value, showEditNodeModal);
+    });
     return;
   }
   showEditNodeModal();
@@ -944,14 +936,22 @@ async function saveExpression() {
   if (currentAST != null) {
     if (editExpressionTrigger === 'Bulk') {
       let exp = await getExpressionString(currentAST);
-      console.log(exp);
       $('#editExpressionModal').modal('hide');
       $.getJSON("?mod=conclude-license&do=saveExpression" + "&upload=" + uploadId + "&item=" + $('#uploadTreeId').val() + "&ast=" + encodeURIComponent(JSON.stringify(currentAST)) + "&astId=" + currentASTId + "&bulk=true")
         .done(function (data) {
-          console.log(data);
-          currentASTId = data.expressionId;
-          bulkFormTableContent[4](currentASTId, exp);
+          currentASTId = getSavedExpressionId(data);
+          if (!currentASTId) {
+            failed({responseText: 'Unable to save license expression'});
+            return;
+          }
+          if (typeof bulkFormTableContent.addExpression === 'function') {
+            bulkFormTableContent.addExpression(currentASTId, exp);
+          } else {
+            bulkFormTableContent[5](currentASTId, exp);
+          }
+          $('#bulkModal').modal('show');
         })
+        .fail(failed);
     } else {
       $.getJSON("?mod=conclude-license&do=saveExpression" + "&upload=" + uploadId + "&item=" + $('#uploadTreeId').val() + "&ast=" + encodeURIComponent(JSON.stringify(currentAST)) + "&astId=" + currentASTId + "&bulk=false")
         .done(function (data) {
