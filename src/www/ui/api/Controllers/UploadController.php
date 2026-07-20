@@ -1055,7 +1055,7 @@ class UploadController extends RestController
 
     if ($license === null) {
       throw new HttpNotFoundException(
-        "No license with  expression '$expression' found.");
+        "No license with expression '$expression' found.");
     }
 
     $licenseIds = $clearingDao->getMainLicenseIds($uploadId, $this->restHelper->getGroupId());
@@ -1069,7 +1069,6 @@ class UploadController extends RestController
     $parent = $uploadDao->getParentItemBounds($uploadId, $uploadTreeTableName);
     $itemTreeBounds = $uploadDao->getItemTreeBounds($parent->getItemId(), $uploadTreeTableName);
     $clearingDecisions = $clearingDao->getFileClearingsFolder($itemTreeBounds, $this->restHelper->getGroupId(), true, true, true);
-    error_log(var_export($clearingDecisions, true));
     foreach ($clearingDecisions as $clearingDecision) {
       if ($clearingDecision->getType() == DecisionTypes::IRRELEVANT) {
         continue;
@@ -1088,7 +1087,7 @@ class UploadController extends RestController
       $clearingDao->makeMainLicense($uploadId, $this->restHelper->getGroupId(), $license->getId());
     } else {
       throw new HttpNotFoundException(
-        "No cleared license with  expression '$expression' found.");
+        "No cleared license with expression '$expression' found.");
     }
     $returnVal = new Info(200, "Successfully added new main license", InfoType::INFO);
     return $response->withJson($returnVal->getArray(), $returnVal->getCode());
